@@ -8,6 +8,7 @@ Do not use this with existing media directories with media files.
 Edit the script with your favorite editor and change the following varialbes:
 
 $tv="/media/vod_tv/"; //Library for TV Shows & Must have trailing /
+
 $movie="/media/vod_movie/"; // Library for Movies & Must have trailing /
 
 $mwlistsurl = 'https://mwlists.com/m3u/strm.php?key=xxxxxx';    //where xxxxx is your mwlists m3u playlist
