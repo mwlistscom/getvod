@@ -12,6 +12,7 @@ $tv="/media/vod_tv/"; //Library for TV Shows & Must have trailing /
 $movie="/media/vod_movie/"; // Library for Movies & Must have trailing /
 
 $mwlistsurl = 'https://mwlists.com/m3u/strm.php?key=xxxxxx';    //where xxxxx is your mwlists m3u playlist
+
 $includegroup = false; //include group name in folder name
 
 Run the script daily:
