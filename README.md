@@ -1,7 +1,8 @@
 # getvod
 
-getvod manages the directory structure for your Emby/Plex strm files. By default it adds the dicrectory structure for every STRM in your m3u playlist.  Getvod will delete empty directories. 
-Do not use this with existing media directories with media files.
+getvod manages the directory structure for your Emby/Plex strm files. By default it adds the dicrectory structure for every STRM in your m3u playlist.  Getvod will delete empty directories and streams that are no longer in the provider list.  
+
+For this reason, do not use this with existing directories with media files.
 
 # setup 
 
@@ -11,7 +12,7 @@ $tv="/media/vod_tv/"; //Library for TV Shows & Must have trailing /
 
 $movie="/media/vod_movie/"; // Library for Movies & Must have trailing /
 
-$mwlistsurl = 'https://mwlists.com/m3u/strm.php?key=xxxxxx';    //where xxxxx is your mwlists m3u playlist
+$mwlistsurl = 'https://mwlists.com/m3u/strm.php?key=xxxxxx';    //where xxxxx is your mwlists m3u playlist or rockmym3u.com link
 
 $includegroup = false; //include group name in folder name
 
