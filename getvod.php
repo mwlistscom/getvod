@@ -18,9 +18,6 @@ ini_set('memory_limit', '4G'); // upper memory limit for large stream file
 $tv="/media/vod_tv/"; //Library for TV Shows &  Must have trailing /
 $movie="/media/vod_movie/"; // Library for Movies & Must have trailing /
 
-//$tv="/media/tv_test/"; //Library for TV Shows &  Must have trailing /
-//$movie="/media/movie_test/"; // Library for Movies & Must have trailing /
-
 $mwlistsurl = 'https://m3u.mwlists.com/m3u/strm.php?key=xxxxxxxx';   // or rockmym3u.com
 $includegroup = false; //include group name in folder name
 $overwritecontents = false; // this may cause a lengthly media scan depedning on your setup; maybe use this once a month ?
