@@ -4,7 +4,7 @@
  * @author      John Martin (help@mwlists.com)
  * @copyright   (C) 2001 - 2021 MWLISTS.COM.  All rights reserved.
  * @license     http://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
- * @link        https://mwlists.com
+ * @link        https://rockmym3u.com
  *
 GetVod is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 GetVod is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
@@ -18,9 +18,12 @@ ini_set('memory_limit', '4G'); // upper memory limit for large stream file
 $tv="/media/vod_tv/"; //Library for TV Shows &  Must have trailing /
 $movie="/media/vod_movie/"; // Library for Movies & Must have trailing /
 
-$mwlistsurl = 'https://mwlists.com/m3u/strm.php?key=xxxxxxxx';  // change xxxxxxxx to your Playlist Key
-$includegroup = false; //include group name in folder name
+//$tv="/media/tv_test/"; //Library for TV Shows &  Must have trailing /
+//$movie="/media/movie_test/"; // Library for Movies & Must have trailing /
 
+$mwlistsurl = 'https://m3u.mwlists.com/m3u/strm.php?key=xxxxxxxx';   // or rockmym3u.com
+$includegroup = false; //include group name in folder name
+$overwritecontents = false; // this may cause a lengthly media scan depedning on your setup; maybe use this once a month ?
 //
 //stuff to remove
 //
@@ -181,6 +184,9 @@ foreach ($obj as $key) {
 
     if (!is_file($dir.$safe_filename.".strm")) { // if the stream does not exist create it and add the url
         print("Created: ".$dir.$safe_filename.".strm\n");
+        file_put_contents($dir.$safe_filename.".strm", $url);     // Save our content to the file.
+    }elseif($overwritecontents){
+        print("Updated: ".$dir.$safe_filename.".strm\n");
         file_put_contents($dir.$safe_filename.".strm", $url);     // Save our content to the file.
     }
 }
