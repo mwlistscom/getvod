@@ -4,6 +4,8 @@ getvod manages the directory structure for your Emby/Plex strm files. By default
 
 For this reason, do not use this with existing directories with media files.
 
+Need help ? Contact us on https://www.facebook.com/rockmym3u or email help@rockmym3u.com
+
 # setup 
 
 Edit the script with your favorite editor and change the following varialbes:
