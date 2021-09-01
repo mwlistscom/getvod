@@ -1,6 +1,6 @@
-# getvod
+# getvod IPTV Playlist for strm files
 
-getvod manages the directory structure for your Emby/Plex strm files. By default it adds the dicrectory structure for every STRM in your m3u playlist.  Getvod will delete empty directories and streams that are no longer in the provider list.  
+getvod manages the directory structure for your Emby/Plex strm files. By default it adds the dicrectory structure for every STRM in your m3u IPTV playlist.  Getvod will delete empty directories and streams that are no longer in the provider list.  
 
 For this reason, do not use this with existing directories with media files.
 
