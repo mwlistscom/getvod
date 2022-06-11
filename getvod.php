@@ -24,7 +24,9 @@
  *   Bug could not remove directories with [ ] in their name due to stupid php bugs; so if we have a vod with [] in
  *       the name we rename it using ()
  *        This means if you have directories or strm files with a [ or ] in their name you will have the manually delete them
- *   
+ *
+ * Version 1.3
+ *  remove if isset from directory check
  */
 
 ini_set('memory_limit', '4G'); // upper memory limit for large stream file
@@ -288,24 +290,21 @@ $dirmovie = getDirContents($movie); //directory contents movie only .strm files 
 //delete tv strm not in provider
 //
 foreach ($dirtv as $n) {
-    if (!isset($n, $dirtv)) {
         if (!(in_array($n, $tvitems))) { // if the array is currupt we can't trust isset; check again by index
             print_r("Delete $n\n");//the getDirContents only collects .strm files, therefore we don't have to check the file name we are about to delete
             unlink($n);
         }
-    }
+
 }
 
 //
 //delete movie strm not in provider
 //
 foreach ($dirmovie as $n) {
-    if (!isset($n, $dirmovie)) {
         if (!(in_array($n, $movieitems))) { // if the array is currupt we can't trust isset
             print_r("Delete $n\n"); //the getDirContents only collects .strm files, therefore we don't have to check the file name we are about to delete
             unlink($n);
         }
-    }
 }
 
 //print_r("Checking for empty directories in Movie Library\n");
