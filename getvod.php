@@ -290,7 +290,7 @@ $dirmovie = getDirContents($movie); //directory contents movie only .strm files 
 //delete tv strm not in provider
 //
 foreach ($dirtv as $n) {
-        if (!(in_array($n, $tvitems))) { // if the array is currupt we can't trust isset; check again by index
+        if (!(in_array($n, $tvitems))) {
             print_r("Delete $n\n");//the getDirContents only collects .strm files, therefore we don't have to check the file name we are about to delete
             unlink($n);
         }
@@ -301,7 +301,7 @@ foreach ($dirtv as $n) {
 //delete movie strm not in provider
 //
 foreach ($dirmovie as $n) {
-        if (!(in_array($n, $movieitems))) { // if the array is currupt we can't trust isset
+        if (!(in_array($n, $movieitems))) {
             print_r("Delete $n\n"); //the getDirContents only collects .strm files, therefore we don't have to check the file name we are about to delete
             unlink($n);
         }
