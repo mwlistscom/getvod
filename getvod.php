@@ -1,7 +1,8 @@
 <?php
+
 /**
  * @package     GetVod
- * @version     1.2 BETA
+ * @version     1.4 BETA
  * @author      John Martin (help@mwlists.com)
  * @copyright   (C) 2001 - 2022 ROCKMYM3U.COM All rights reserved.
  * @license     http://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
@@ -26,9 +27,13 @@
  *        This means if you have directories or strm files with a [ or ] in their name you will have the manually delete them
  *
  * Version 1.3
- *  remove if isset from directory check
+ *  remove if isset from directory check; bugs and didn't work right all the time; maybe add back with php8
+ * 
+ * Version 1.4
+ *  added multiple playlists 
+ *  added bom removel to deal with utf8 lists; was causing the getvod to exit early 
+ *  added some debug for json so we can understand better when bad things happen
  */
-
 ini_set('memory_limit', '4G'); // upper memory limit for large stream file
 //
 // Modify these variables for your setup
@@ -36,11 +41,18 @@ ini_set('memory_limit', '4G'); // upper memory limit for large stream file
 $tv = "/media/vod_tv/"; //Library for TV Shows &  Must have trailing /
 $movie = "/media/vod_movie/"; // Library for Movies & Must have trailing /
 $strmdir = "/media/"; // Where we store the strm file
-$strm = "rockmym3u.strm"; // the downloaded file
-$mwlistsurl = 'https://rockmym3u.com/m3u/strm.php?key=xxxxxxxxx';   //Playlist from RockMyM3U M3U Editor
+$strm = "rockmym3u.strm"; // the downloaded file name
+//
+// Carefull - each playlist is held in memory
+// If there are duplicates in the playlist, the last one will overwrite if you set $overwritecontents = true
+//
+$rockmym3uurl[] = 'https://m3u.mwlists.com/m3u/strm.php?key=xxxxxxxxx';   //Playlist from RockMyM3U M3U Editor
+//$rockmym3uurl[] = 'https://rockmym3u.com/m3u/strm.php?key=xxxxxxxxx';   //Playlist from RockMyM3U M3U Editor
+//$rockmym3uurl[] = 'https://rockmym3u.com/m3u/strm.php?key=xxxxxxxxx';   //Playlist from RockMyM3U M3U Editor
+
 $includegroup = false; //include group name in folder name
 $overwritecontents = false; // this may cause a lengthy media scan depending on your setup; maybe use this once a month ?
-$moviedir = false;  //put movies into a directory example : /movies/The_Shawshank_Redemption_(1994)/The_Shawshank_Redemption_(1994).strm
+$moviedir = true;  //put movies into a directory example : /movies/The_Shawshank_Redemption_(1994)/The_Shawshank_Redemption_(1994).strm
 //
 //stuff to remove
 //
@@ -48,7 +60,6 @@ $lefttrim = ""; // trim this text from the left of the file name
 $remove[] = "'"; //remove stuff we don't want in the file name
 $remove[] = '"';
 $remove[] = '-';
-
 //
 // Override  one per line
 //
@@ -63,8 +74,7 @@ $movieitems = array(); //same for movies
 
 // not needed for production
 //register_shutdown_function("fatal_handler");
-function fatal_handler()
-{
+function fatal_handler() {
     $errfile = "unknown file";
     $errstr = "shutdown";
     $errno = E_CORE_ERROR;
@@ -100,211 +110,196 @@ if (!is_dir($strmdir)) {
 }
 
 
-try {
-    print("Download : $mwlistsurl\n");
-    //
-    // Most users don't have curl with their PHP build
-    //
-    $in = fopen($mwlistsurl, "rb") or die ('Error opening STRM file from RockMyM3U! ');
-    $fp = fopen($strmdir . $strm, 'w+') or die ('Error opening STRM file for write ! Check working directory permissions ! ');
+foreach ($rockmym3uurl as $downloadurl) {
+    try {
+        print("Download : $downloadurl\n");
+        $tmpfile = ($strmdir . substr($downloadurl, strpos($downloadurl, "=") + 1) . '-' . $strm);
+        $in = fopen($downloadurl, "rb") or die('Error opening STRM file from RockMyM3U! ');
+        $fp = fopen($tmpfile, 'w+') or die('Error opening STRM file for write ! Check working directory permissions ! ');
 
-    while (!feof($in)) {
-        fwrite($fp, fread($in, 8192));
+        while (!feof($in)) {
+            fwrite($fp, fread($in, 8192));
+        }
+        fclose($fp);
+        fclose($in);
+        $obj = json_decode(trim(file_get_contents($tmpfile), "\x0")); // load the file into a object; would probably not work on a pi due to memory; remove BOM as well
+    } catch (exception $e) {
+        print("\n Tragedy struck contacting RockMyM3U, try again later\n");
+        echo $e->getMessage();
+        print("\n\n");
+        die();
     }
-    fclose($fp);
-    fclose($in);
-
-
-    /*
-     * Curl Implementation
-     *
-    set_time_limit(0);
-    $path = $strmdir.$strm; // the json strm file we'll download
-    $fp = fopen($path, 'w+') or die ('Error opening STRM file for write ! Check working directory permissions ! ');
-
-    $ch = curl_init($mwlistsurl);
-    curl_setopt($ch, CURLOPT_FILE, $fp);
-
-    $data = curl_exec($ch);
-    if (curl_errno($ch)) {
-            echo "the cURL error is : " . curl_error($ch);
-            curl_close($ch);
-            fclose($fp);
-            die;
+    switch (json_last_error()) {
+        case JSON_ERROR_NONE:
+            //echo " - No errors\n";
+            break;
+        case JSON_ERROR_DEPTH:
+            echo " JSON - Maximum stack depth exceeded $downloadurl\n";
+            die();
+        case JSON_ERROR_STATE_MISMATCH:
+            echo " JSON - Underflow or the modes mismatch $downloadurl\n";
+            die();
+        case JSON_ERROR_CTRL_CHAR:
+            echo " JSON - Unexpected control character found $downloadurl\n";
+            die();
+        case JSON_ERROR_SYNTAX:
+            echo " JSON - Syntax error, malformed JSON $downloadurl\n";
+            die();
+        case JSON_ERROR_UTF8:
+            echo " JSON - Malformed UTF-8 characters, possibly incorrectly encoded $downloadurl\n";
+            die();
+        default:
+            echo " JSON - Unknown error $downloadurl\n";
+            die();
     }
 
-    curl_close($ch);
-    fclose($fp);
+    if ($obj === null || is_bool($obj)) {
+        print("\n Error geting file from MWLISTS; not a json file or file corrupt\n\n");
+        die();
+    }
 
-
-     */
-
-    $obj = json_decode(file_get_contents($strmdir . $strm)); // load the file into a object; would probably not work on a pi due to memory
-} catch (exception $e) {
-    print("\n Tragedy struck contacting RockMyM3U, try again later\n\n");
-    echo $e->getMessage();
-    print("\n\n");
-    die();
-}
-
-if (json_last_error() != 0) {
-    print("\n File does not seem to be a JSON file\n\n");
-    die();
-}
-
-if ($obj === null || is_bool($obj)) {
-    print("\n Error geting file from MWLISTS; not a json file or file corrupt\n\n");
-    die();
-}
-
-if (count($obj) < 100) { //less than 100 VODs maybe it died?
-    print("\n File seems incomplete less then 100 vod? If so modify source code.\n\n");
-    die();
-}
-print("Processing File for new VOD\n");
+    if (count($obj) < 100) { //less than 100 VODs maybe it died?
+        print("\n WARNING: File seems incomplete less then 100 vod? If so modify source code.\n\n");
+        die;
+    }
+    print("Processing File for new VOD from $downloadurl \n");
 //
 //Loop through the list from rockmym3u and create the file for emby to read
 //
-foreach ($obj as $key) {
-    $file = str_replace(' ', '_', $key->tvg_name);
-    $file = str_replace('[', "(", $file);
-    $file = str_replace(']', ")", $file);
-    $file = str_replace($remove, "", $file);
-    $group = str_replace(' ', '_', $key->group_title);
-    $group = str_replace($remove, "", $group);
-    $url = $key->url;
+    foreach ($obj as $key) {
+        $file = str_replace(' ', '_', $key->tvg_name);
+        $file = str_replace('[', "(", $file);
+        $file = str_replace(']', ")", $file);
+        $file = str_replace($remove, "", $file);
+        $group = str_replace(' ', '_', $key->group_title);
+        $group = str_replace($remove, "", $group);
+        $url = $key->url;
 
-    if ($lefttrim != null) { // leave as null and nothing gets removed
-        $file = ltrim($file, $lefttrim); //remove left characters
-    } // we should probably add a rtrim here but nobody asked so, Bob's your uncle?
+        if ($lefttrim != null) { // leave as null and nothing gets removed
+            $file = ltrim($file, $lefttrim); //remove left characters
+        } // we should probably add a rtrim here but nobody asked so, Bob's your uncle?
 
-    $safe_filename = Vod::sanitizeFileName($file); // use a safe file name
+        $safe_filename = Vod::sanitizeFileName($file); // use a safe file name
+        // in this if else code we are -
+        // checking to see if the .strm is a movie or tv show
+        // depending on the type we are going to set the directory structure
+        // based on the user prefs.  At the end $dir will contain the
+        // intended destination for the stream
+        //
+        if ((preg_match("/S(?:100|\d{1,2})/", $file) || isin($file, $thisisatvshow)) && !(isin($file, $thisisamovie))) { // this is a TV Episode
+            $type = 0; //tv
 
-    // in this if else code we are -
-    // checking to see if the .strm is a movie or tv show
-    // depending on the type we are going to set the directory structure
-    // based on the user prefs.  At the end $dir will contain the
-    // intended destination for the stream
-    //
-    if ((preg_match("/S(?:100|\d{1,2})/", $file) || isin($file, $thisisatvshow)) && !(isin($file, $thisisamovie))) { // this is a TV Episode
-        $type = 0;//tv
+            $x = preg_split('/S(?:100|\d{1,2})/', $file);
+            $n = rtrim($x[0], '_'); // this is the name of the series
 
-        $x = preg_split('/S(?:100|\d{1,2})/', $file);
-        $n = rtrim($x[0], '_'); // this is the name of the series
-
-        preg_match_all('/S(?:100|\d{1,2})/', $file, $m);
-        $s = $m[0][0];// this is the season number
-
-        //printf("Series Name: $n  Season: $s Stream url: $url\n");
-        if ($includegroup) {
-            $dir = $tv . $group . '/' . $n . '/' . $s . '/'; // this is the full directory path the season episode
-        } else {
-            $dir = $tv . $n . '/' . $s . '/'; // this is the full directory path the season episode
-        }
-    } else { // this is a Movie
-        $type = 1;//movie
-
-        if ($includegroup) {
-            if ($moviedir) { // place the strm in it's own folder
-                $dir = $movie . $group . '/' . $safe_filename . '/';
+            preg_match_all('/S(?:100|\d{1,2})/', $file, $m);
+            $s = $m[0][0]; // this is the season number
+            //printf("Series Name: $n  Season: $s Stream url: $url\n");
+            if ($includegroup) {
+                $dir = $tv . $group . '/' . $n . '/' . $s . '/'; // this is the full directory path the season episode
             } else {
-                $dir = $movie . $group . '/';
+                $dir = $tv . $n . '/' . $s . '/'; // this is the full directory path the season episode
             }
-        } else {
+        } else { // this is a Movie
+            $type = 1; //movie
 
-            if ($moviedir) { // place the strm into it's own folder
-                $dir = $movie . $safe_filename . '/'; // for emby we don't need an elaborate path for the movies
+            if ($includegroup) {
+                if ($moviedir) { // place the strm in it's own folder
+                    $dir = $movie . $group . '/' . $safe_filename . '/';
+                } else {
+                    $dir = $movie . $group . '/';
+                }
             } else {
-                $dir = $movie;
+
+                if ($moviedir) { // place the strm into it's own folder
+                    $dir = $movie . $safe_filename . '/'; // for emby we don't need an elaborate path for the movies
+                } else {
+                    $dir = $movie;
+                }
             }
         }
-    }
-
-    //
-    //if type is tv, create the structure and maintain an array of stream names
-    //
-    if ($type == 0) { //tv items need a season stucture
-        $tvitems[] = ($dir . $safe_filename . ".strm"); // add the stream file name to an array; use later to delete streams provide does not have
 
         //
-        //create the directory structure
+        //if type is tv, create the structure and maintain an array of stream names
         //
-        if ($includegroup) { // group directory name
-            if (!file_exists($tv . $group)) {
-                mkdir($tv . $group, 0777, true); //season name
-            }
-
-
-            if (!file_exists($tv . $group . '/' . $n)) {
-                mkdir($tv . $group . '/' . $n, 0777, true); //season name
-            }
-
-            if (!file_exists($tv . $group . '/' . $n . '/' . $s)) {
-                mkdir($tv . $group . '/' . $n . '/' . $s, 0777, true); //season i.e. 01
-            }
-        } else {
+        if ($type == 0) { //tv items need a season stucture
+            $tvitems[] = ($dir . $safe_filename . ".strm"); // add the stream file name to an array; use later to delete streams provide does not have
             //
-            if (!file_exists($tv . $n)) {
-                mkdir($tv . $n, 0777, true); //season name
-            }
+            //create the directory structure
+            //
+            if ($includegroup) { // group directory name
+                if (!file_exists($tv . $group)) {
+                    mkdir($tv . $group, 0777, true); //season name
+                }
 
-            if (!file_exists($tv . $n . '/' . $s)) {
-                mkdir($tv . $n . '/' . $s, 0777, true); //season i.e. 01
+
+                if (!file_exists($tv . $group . '/' . $n)) {
+                    mkdir($tv . $group . '/' . $n, 0777, true); //season name
+                }
+
+                if (!file_exists($tv . $group . '/' . $n . '/' . $s)) {
+                    mkdir($tv . $group . '/' . $n . '/' . $s, 0777, true); //season i.e. 01
+                }
+            } else {
+                //
+                if (!file_exists($tv . $n)) {
+                    mkdir($tv . $n, 0777, true); //season name
+                }
+
+                if (!file_exists($tv . $n . '/' . $s)) {
+                    mkdir($tv . $n . '/' . $s, 0777, true); //season i.e. 01
+                }
+            }
+        } else { // this is a movie, so let's create the directories
+            $movieitems[] = ($dir . $safe_filename . ".strm"); //Add the name of the stream to an array
+            if ($includegroup) { // group directory name
+                if (!file_exists($movie . $group)) {
+                    mkdir($movie . $group, 0777, true); //group title in directory name
+                }
+                if (!file_exists($movie . $group . '/' . $safe_filename)) {
+                    mkdir($movie . $group . '/' . $safe_filename, 0777, true); //group title in directory name
+                }
+            } else {
+                if (!file_exists($movie . $safe_filename)) {
+                    mkdir($movie . $safe_filename, 0777, true); // don't need group title
+                }
             }
         }
-    } else { // this is a movie, so let's create the directories
-        $movieitems[] = ($dir . $safe_filename . ".strm"); //Add the name of the stream to an array
-        if ($includegroup) { // group directory name
-            if (!file_exists($movie . $group)) {
-                mkdir($movie . $group, 0777, true); //group title in directory name
-            }
-            if (!file_exists($movie . $group . '/' . $safe_filename)) {
-                mkdir($movie . $group . '/' . $safe_filename, 0777, true); //group title in directory name
-            }
 
-        } else {
-            if (!file_exists($movie . $safe_filename)) {
-                mkdir($movie . $safe_filename, 0777, true); // don't need group title
-            }
-
+        // now we have the file name, and the directory it's intened for, lets write the strm file
+        if (!is_file($dir . $safe_filename . ".strm")) { // if the stream does not exist create it and add the url
+            print("Created: " . $dir . $safe_filename . ".strm\n");
+            file_put_contents($dir . $safe_filename . ".strm", $url);     // Save our content to the file.
+        } elseif ($overwritecontents) {
+            print("Updated: " . $dir . $safe_filename . ".strm\n");
+            file_put_contents($dir . $safe_filename . ".strm", $url);     // Save our content to the file.
         }
     }
+} //end processing playlists; Let's remove stuff we don't have
+//
 
-    // now we have the file name, and the directory it's intened for, lets write the strm file
-    if (!is_file($dir . $safe_filename . ".strm")) { // if the stream does not exist create it and add the url
-        print("Created: " . $dir . $safe_filename . ".strm\n");
-        file_put_contents($dir . $safe_filename . ".strm", $url);     // Save our content to the file.
-    } elseif ($overwritecontents) {
-        print("Updated: " . $dir . $safe_filename . ".strm\n");
-        file_put_contents($dir . $safe_filename . ".strm", $url);     // Save our content to the file.
-    }
-}
+print_r("Crosscheck anything we have the provider(s) deleted\n");
 
-print_r("Crosscheck anything we have the provider deleted\n");
-
-$dirtv = getDirContents($tv);// directory contents tv only .strm files will be added to array
+$dirtv = getDirContents($tv); // directory contents tv only .strm files will be added to array
 $dirmovie = getDirContents($movie); //directory contents movie only .strm files will be added to array`
-
-
 //
 //delete tv strm not in provider
 //
 foreach ($dirtv as $n) {
-        if (!(in_array($n, $tvitems))) {
-            print_r("Delete $n\n");//the getDirContents only collects .strm files, therefore we don't have to check the file name we are about to delete
-            unlink($n);
-        }
-
+    if (!(in_array($n, $tvitems))) {
+        print_r("Delete $n\n"); //the getDirContents only collects .strm files, therefore we don't have to check the file name we are about to delete
+        unlink($n);
+    }
 }
 
 //
 //delete movie strm not in provider
 //
 foreach ($dirmovie as $n) {
-        if (!(in_array($n, $movieitems))) {
-            print_r("Delete $n\n"); //the getDirContents only collects .strm files, therefore we don't have to check the file name we are about to delete
-            unlink($n);
-        }
+    if (!(in_array($n, $movieitems))) {
+        print_r("Delete $n\n"); //the getDirContents only collects .strm files, therefore we don't have to check the file name we are about to delete
+        unlink($n);
+    }
 }
 
 //print_r("Checking for empty directories in Movie Library\n");
@@ -314,11 +309,11 @@ foreach ($dirmovie as $n) {
 
 print_r("Finished\n\n");
 exit(0);
+
 //
 //Built in php functions are too slow; so we built our own
 //
-function getDirContents($dir, &$results = array())
-{
+function getDirContents($dir, &$results = array()) {
     $files = scandir($dir);
 
     foreach ($files as $key => $value) {
@@ -336,8 +331,7 @@ function getDirContents($dir, &$results = array())
     return $results;
 }
 
-function stringEndsWith($haystack, $needle, $case = true)
-{
+function stringEndsWith($haystack, $needle, $case = true) {
     $expectedPosition = strlen($haystack) - strlen($needle);
     if ($case) {
         return strrpos($haystack, $needle, 0) === $expectedPosition;
@@ -345,8 +339,7 @@ function stringEndsWith($haystack, $needle, $case = true)
     return strripos($haystack, $needle, 0) === $expectedPosition;
 }
 
-function RemoveEmptySubFolders($path)
-{
+function RemoveEmptySubFolders($path) {
     $empty = true;
     foreach (glob($path . DIRECTORY_SEPARATOR . "*") as $file) {
         $empty &= is_dir($file) && RemoveEmptySubFolders($file);
@@ -357,15 +350,13 @@ function RemoveEmptySubFolders($path)
     return $empty && rmdir($path);
 }
 
-
-function isin($search, $needles)
-{ // seach the string of array values
+function isin($search, $needles) { // seach the string of array values
     $find = ($search != str_ireplace($needles, "XX", $search)) ? true : false;
     return ($find);
 }
 
-class Vod
-{
+class Vod {
+
     /**
      * Returns a safe filename, for a given platform (OS), by replacing all
      * dangerous characters with an underscore.
@@ -375,8 +366,7 @@ class Vod
      *
      * @return Boolean string A safe version of the input filename
      */
-    public static function sanitizeFileName($dangerous_filename, $platform = 'Unix')
-    {
+    public static function sanitizeFileName($dangerous_filename, $platform = 'Unix') {
         if (in_array(strtolower($platform), array('unix', 'linux'))) {
             // our list of "dangerous characters", add/remove characters if necessary
             $dangerous_characters = array(" ", '"', "'", "&", "/", "\\", "?", "#");
