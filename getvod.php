@@ -33,6 +33,9 @@
  *  added multiple playlists 
  *  added bom removel to deal with utf8 lists; was causing the getvod to exit early 
  *  added some debug for json so we can understand better when bad things happen
+ * 
+ * Version 1.41
+ *  cleaned up comments no code changes
  */
 ini_set('memory_limit', '4G'); // upper memory limit for large stream file
 //
@@ -90,7 +93,6 @@ function fatal_handler() {
         print("Error: Line=$errline, message: $errstr \n\n");
     }
 }
-
 //
 // validate the settings
 //
@@ -302,10 +304,6 @@ foreach ($dirmovie as $n) {
     }
 }
 
-//print_r("Checking for empty directories in Movie Library\n");
-//RemoveEmptySubFolders($dirmovie);
-//print_r("Checking for empty directories in TV Library\n");
-//RemoveEmptySubFolders($dirtv);
 
 print_r("Finished\n\n");
 exit(0);
