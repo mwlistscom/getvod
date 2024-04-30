@@ -3,7 +3,7 @@
 /**
  * @package     GetVod
  * @version     1.4 BETA
- * @author      John Martin (help@mwlists.com)
+ * @author      Jules Potvin (help@mwlists.com)
  * @copyright   (C) 2001 - 2022 ROCKMYM3U.COM All rights reserved.
  * @license     http://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
  * @link        https://rockmym3u.com
