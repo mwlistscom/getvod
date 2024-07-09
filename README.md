@@ -1,3 +1,12 @@
+## GetVOD - 
+We no longer maintain GetVOD - please switch to multi-platform GetSTRM. 
+You can find this repository here:
+
+https://github.com/mwlistscom/GetSTRM/releases/tag/v1.0.2
+There are no plans to update GetVOD going forward
+
+
+
 # getvod IPTV Playlist for strm files
 
 getvod manages the directory structure for your Emby/JellyFin strm files. By default it adds the dicrectory structure for every STRM in your m3u IPTV playlist.  Getvod will delete empty directories and streams that are no longer in the provider list.  
