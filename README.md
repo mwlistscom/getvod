@@ -2,7 +2,7 @@
 We no longer maintain GetVOD - please switch to multi-platform GetSTRM. 
 You can find this repository here:
 
-https://github.com/mwlistscom/GetSTRM/releases/tag/v1.0.2
+https://github.com/mwlistscom/GetSTRM
 There are no plans to update GetVOD going forward
 
 
